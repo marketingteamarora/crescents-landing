@@ -8,12 +8,41 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
-    domains: ['hkvknskptiiniqdwitau.supabase.co'],
+    domains: [
+      'localhost', 
+      'crescents-landing.vercel.app',
+      '*.supabase.co',
+      'supabase.com',
+      '*.vercel.app',
+      'vercel.app'
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
+  reactStrictMode: false,
+  experimental: {
+    serverActions: true,
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        net: false,
+        tls: false,
+        dns: false,
+        fs: false,
+        child_process: false,
+      };
+    }
+    return config;
   },
   async headers() {
     return [
       {
-        // Apply these headers to all routes
         source: '/:path*',
         headers: [
           {
@@ -26,19 +55,38 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization',
+            value: 'X-Requested-With, Content-Type, Authorization, apikey',
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true',
           },
         ],
       },
-    ]
+    ];
   },
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/:path*`,
-      },
-    ]
+    return {
+      beforeFiles: [
+        {
+          source: '/api/:path*',
+          has: [
+            {
+              type: 'header',
+              key: 'Authorization',
+              value: 'Bearer (.*)',
+            },
+          ],
+          destination: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/:path*`,
+        },
+      ],
+      afterFiles: [
+        {
+          source: '/api/:path*',
+          destination: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/:path*`,
+        },
+      ],
+    };
   },
 }
 
