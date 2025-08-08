@@ -2,8 +2,23 @@ import { NextResponse } from "next/server"
 import { supabaseServer } from "@/lib/supabase/server"
 import { defaultContent } from "@/lib/default-content"
 
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
 // Revalidate every 60 seconds
 export const revalidate = 60
+
+// Handle OPTIONS method for CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders
+  });
+}
 
 export async function GET() {
   console.log("Fetching content from Supabase...")
@@ -43,11 +58,11 @@ export async function GET() {
       }
       
       console.error("Error response:", errorResponse)
-      return NextResponse.json(errorResponse,
-        { 
-          status: 200,
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
+      return NextResponse.json(errorResponse, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
             "Pragma": "no-cache",
             "Expires": "0",
             "Content-Type": "application/json"
@@ -80,11 +95,12 @@ export async function GET() {
     
     // Return the content from the database
     return NextResponse.json(
-      data.content,
+      { ...defaultContent, ...data.content },
       { 
         status: 200,
         headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
+          ...corsHeaders,
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
           "Pragma": "no-cache",
           "Expires": "0",
           "Content-Type": "application/json"
